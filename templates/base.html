@@ -7,129 +7,233 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+        
+        #wrapper {
+            display: flex;
+            width: 100%;
+        }
+        
+        #sidebar-wrapper {
+            min-height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #1e7e34 0%, #155724 100%);
+            transition: margin 0.25s ease-out;
+        }
+        
+        #sidebar-wrapper .sidebar-heading {
+            padding: 1rem 1.25rem;
+            font-size: 1.2rem;
+            color: white;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        #sidebar-wrapper .list-group {
+            width: 100%;
+        }
+        
+        .list-group-item {
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.75rem 1.25rem;
+            transition: all 0.3s;
+        }
+        
+        .list-group-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding-left: 1.5rem;
+        }
+        
+        .list-group-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .list-group-item i {
+            width: 25px;
+            margin-right: 10px;
+        }
+        
+        #page-content-wrapper {
+            flex: 1;
+            background: #f8f9fa;
+        }
+        
+        .top-navbar {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 1.5rem;
+            margin-bottom: 0;
+        }
+        
+        .content-area {
+            padding: 2rem;
+        }
+        
+        #menu-toggle {
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: -250px;
+            }
+            
+            #wrapper.toggled #sidebar-wrapper {
+                margin-left: 0;
+            }
+        }
+        
+        .sidebar-section-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 1rem 1.25rem 0.5rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-tractor"></i> FS25 Farm Manager
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="{{ url_for('index') }}">
-                        <i class="fas fa-home"></i> Dashboard
-                    </a>
-                    <a class="nav-link" href="{{ url_for('fields_list') }}">
-                        <i class="fas fa-map"></i> Fields
-                    </a>
-                    <a class="nav-link" href="{{ url_for('storage_dashboard') }}">
-                        <i class="fas fa-warehouse"></i> Storage
-                    </a>
-                    <a class="nav-link" href="{{ url_for('planting_dashboard') }}">
-                        <i class="fas fa-tractor"></i> Planting
-                    </a>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-bar"></i> Reports
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('reports_dashboard') }}">
-                                <i class="fas fa-chart-line"></i> Performance Dashboard
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('storage_dashboard') }}">
-                                <i class="fas fa-warehouse"></i> Storage Overview
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="exportAllData()">
-                                <i class="fas fa-download"></i> Export All Data
-                            </a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarActions" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-plus"></i> Quick Add
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('add_field') }}">
-                                <i class="fas fa-map"></i> Add Field
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('add_crop_season') }}">
-                                <i class="fas fa-seedling"></i> Add Crop Season
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('add_operation') }}">
-                                <i class="fas fa-cogs"></i> Log Operation
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('add_weather_event') }}">
-                                <i class="fas fa-cloud-rain"></i> Log Weather Event
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('storage_dashboard') }}">
-                                <i class="fas fa-warehouse"></i> Update Storage
-                            </a></li>
-                        </ul>
-                    </li>
-                </div>
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper">
+            <div class="sidebar-heading">
+                <i class="fas fa-tractor"></i> FS25 Manager
+            </div>
+            <div class="list-group list-group-flush">
+                <!-- Main Navigation -->
+                <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                
+                <div class="sidebar-section-title">Farm Management</div>
+                
+                <a href="{{ url_for('fields_list') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-map"></i> Fields
+                </a>
+                
+                <a href="{{ url_for('planting_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-seedling"></i> Planting
+                </a>
+                
+                <a href="{{ url_for('storage_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-warehouse"></i> Storage
+                </a>
+                
+                <a href="{{ url_for('crops_list') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-leaf"></i> Crop Seasons
+                </a>
+                
+                <a href="{{ url_for('operations_list') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cogs"></i> Operations
+                </a>
+                
+                <div class="sidebar-section-title">Quick Add</div>
+                
+                <a href="{{ url_for('add_field') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-plus-circle"></i> Add Field
+                </a>
+                
+                <a href="{{ url_for('add_planting') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-plus-circle"></i> New Planting
+                </a>
+                
+                <a href="{{ url_for('add_crop_season') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-plus-circle"></i> Add Crop Season
+                </a>
+                
+                <a href="{{ url_for('add_operation') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-plus-circle"></i> Log Operation
+                </a>
+                
+                <a href="{{ url_for('add_weather_event') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cloud-rain"></i> Log Weather
+                </a>
+                
+                <div class="sidebar-section-title">Reports</div>
+                
+                <a href="{{ url_for('reports_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </a>
+                
+                <a href="{{ url_for('manage_locations') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-map-marker-alt"></i> Sale Locations
+                </a>
             </div>
         </div>
-    </nav>
 
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <!-- Top Navbar -->
+            <nav class="top-navbar">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-success" id="menu-toggle">
+                            <i class="fas fa-bars"></i>
+                        </button>
                     </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        {% block content %}{% endblock %}
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-light mt-5 py-4">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-tractor"></i> FS25 Farm Manager
-                        <span class="ms-2">Track your farming operation</span>
-                    </p>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> <span id="current-time"></span>
+                        </small>
+                    </div>
                 </div>
-                <div class="col-md-6 text-end">
-                    <small class="text-muted">
-                        Last updated: <span id="current-time"></span>
-                    </small>
-                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="content-area">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
             </div>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Global JavaScript -->
     <script>
+        // Toggle sidebar
+        document.getElementById("menu-toggle").addEventListener("click", function(e) {
+            e.preventDefault();
+            document.getElementById("wrapper").classList.toggle("toggled");
+        });
+
         // Update current time
         function updateTime() {
             const now = new Date();
             document.getElementById('current-time').textContent = now.toLocaleString();
         }
         updateTime();
-        setInterval(updateTime, 60000); // Update every minute
+        setInterval(updateTime, 60000);
 
-        // Global functions
-        function exportAllData() {
-            if (confirm('Export all farm data to CSV files?')) {
-                window.location.href = '/export/all-data';
-            }
-        }
+        // Highlight active menu item
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const menuItems = document.querySelectorAll('.list-group-item');
+            
+            menuItems.forEach(item => {
+                if (item.getAttribute('href') === currentPath) {
+                    item.classList.add('active');
+                }
+            });
+        });
 
         // Global notification system
         function showNotification(message, type = 'info') {
@@ -140,10 +244,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             
-            const container = document.querySelector('.container');
+            const container = document.querySelector('.content-area');
             container.insertBefore(alertDiv, container.firstChild);
             
-            // Auto-remove after 5 seconds
             setTimeout(() => {
                 if (alertDiv && alertDiv.parentNode) {
                     alertDiv.remove();
@@ -153,19 +256,14 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
-            // Ctrl+Shift+S = Go to Storage
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 window.location.href = "{{ url_for('storage_dashboard') }}";
             }
-            
-            // Ctrl+Shift+F = Go to Fields
             if (e.ctrlKey && e.shiftKey && e.key === 'F') {
                 e.preventDefault();
                 window.location.href = "{{ url_for('fields_list') }}";
             }
-            
-            // Ctrl+Shift+H = Go to Home
             if (e.ctrlKey && e.shiftKey && e.key === 'H') {
                 e.preventDefault();
                 window.location.href = "{{ url_for('index') }}";

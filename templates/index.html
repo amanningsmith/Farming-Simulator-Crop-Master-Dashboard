@@ -3,126 +3,355 @@
 {% block title %}Dashboard - FS25 Farm Manager{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <h1 class="display-4">🌾 Farming Simulator Master Dashboard</h1>
-        <p class="lead">Welcome to your farming operation management system</p>
+        <h1 class="display-5">🌾 Farm Dashboard</h1>
+        <p class="lead text-muted">Complete overview of your farming operation</p>
     </div>
 </div>
 
-<!-- Statistics Cards -->
+<!-- Key Performance Indicators -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card stats-card">
+        <div class="card border-success">
             <div class="card-body">
-                <div class="stats-number">{{ stats.total_fields or 0 }}</div>
-                <div class="stats-label">Total Fields</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Fields</h6>
+                        <h2 class="mb-0">{{ stats.total_fields or 0 }}</h2>
+                        <small class="text-success">{{ stats.total_area or 0 }} hectares</small>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-map fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('fields_list') }}" class="text-decoration-none small">
+                    View all fields <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card stats-card">
+        <div class="card border-info">
             <div class="card-body">
-                <div class="stats-number">{{ stats.total_area or 0 }}</div>
-                <div class="stats-label">Hectares</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Active Seasons</h6>
+                        <h2 class="mb-0">{{ stats.active_seasons or 0 }}</h2>
+                        <small class="text-info">Current year</small>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-seedling fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('crops_list') }}" class="text-decoration-none small">
+                    View crop seasons <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card stats-card">
+        <div class="card border-warning">
             <div class="card-body">
-                <div class="stats-number">{{ stats.active_seasons or 0 }}</div>
-                <div class="stats-label">Active Seasons</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Yield</h6>
+                        <h2 class="mb-0">{{ "{:.1f}".format(stats.total_yield or 0) }}</h2>
+                        <small class="text-warning">tonnes this year</small>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-weight-hanging fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('reports_dashboard') }}" class="text-decoration-none small">
+                    View analytics <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card stats-card">
+        <div class="card border-primary">
             <div class="card-body">
-                <div class="stats-number">{{ stats.total_yield or 0 }}</div>
-                <div class="stats-label">Total Yield (t)</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Storage Value</h6>
+                        <h2 class="mb-0">${{ "{:,.0f}".format(stats.storage_value or 0) }}</h2>
+                        <small class="text-primary">Current inventory</small>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-warehouse fa-3x opacity-50"></i>
+                    </div>
+                </div>
             </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('storage_dashboard') }}" class="text-decoration-none small">
+                    View storage <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity & Top Fields -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+                    <a href="{{ url_for('operations_list') }}" class="btn btn-sm btn-outline-secondary">
+                        View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_operations %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Field</th>
+                                <th>Operation</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in recent_operations %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">{{ op.operation_date }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ op.field_name or op.field_id }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ op.operation_type }}</span>
+                                </td>
+                                <td>
+                                    {% if op.hours_worked %}
+                                        {{ op.hours_worked }} hrs
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <small>Complete</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No recent operations recorded.</p>
+                    <a href="{{ url_for('add_operation') }}" class="btn btn-success btn-sm mt-2">
+                        <i class="fas fa-plus"></i> Log First Operation
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-trophy"></i> Top Performing Fields</h5>
+            </div>
+            <div class="card-body">
+                {% if top_fields %}
+                <div class="list-group list-group-flush">
+                    {% for field in top_fields %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ field.field_name }}</h6>
+                                <small class="text-muted">{{ field.seasons }} seasons</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">{{ field.avg_yield }} t/ha</span>
+                            </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: {{ (field.avg_yield / 10 * 100)|min(100) }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No yield data available yet.</p>
+                </div>
+                {% endif %}
+            </div>
+            {% if top_fields %}
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('reports_dashboard') }}" class="text-decoration-none small">
+                    View detailed analytics <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Seasonal Overview & Weather Alerts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Seasonal Overview</h5>
+            </div>
+            <div class="card-body">
+                {% if seasonal_data %}
+                <div class="row">
+                    {% for crop_type, data in seasonal_data.items() %}
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-1">{{ crop_type }}</h6>
+                            <h4 class="mb-1">{{ data.count }}</h4>
+                            <small class="text-muted">
+                                {{ "{:.1f}".format(data.total_area) }} ha
+                            </small>
+                            {% if data.avg_yield %}
+                            <div class="mt-2">
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up"></i> {{ "{:.1f}".format(data.avg_yield) }} t/ha avg
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-leaf fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No seasonal data available.</p>
+                    <a href="{{ url_for('add_crop_season') }}" class="btn btn-success btn-sm mt-2">
+                        <i class="fas fa-plus"></i> Add Crop Season
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Weather Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% if weather_events %}
+                <div class="list-group list-group-flush">
+                    {% for event in weather_events %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-start">
+                            <div class="text-{{ 'danger' if event.severity in ['Severe', 'Extreme'] else 'warning' }} me-3">
+                                <i class="fas fa-cloud-rain fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ event.weather_type }}</h6>
+                                <p class="mb-1 small text-muted">
+                                    Field: {{ event.field_name }} | {{ event.event_date }}
+                                </p>
+                                {% if event.yield_impact_percent %}
+                                <span class="badge bg-danger">-{{ event.yield_impact_percent }}% yield impact</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-cloud-sun fa-3x text-success mb-3"></i>
+                    <p class="text-muted mb-0">No recent weather events.</p>
+                    <small class="text-success">All clear!</small>
+                </div>
+                {% endif %}
+            </div>
+            {% if weather_events %}
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('add_weather_event') }}" class="text-decoration-none small">
+                    <i class="fas fa-plus"></i> Log weather event
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Quick Actions -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h3>Quick Actions</h3>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('add_field') }}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Add Field
-            </a>
-            <a href="{{ url_for('add_crop_season') }}" class="btn btn-success">
-                <i class="fas fa-seedling"></i> Add Crop Season
-            </a>
-            <a href="{{ url_for('add_operation') }}" class="btn btn-success">
-                <i class="fas fa-cogs"></i> Log Operation
-            </a>
-            <a href="{{ url_for('add_weather_event') }}" class="btn btn-warning">
-                <i class="fas fa-cloud-rain"></i> Log Weather Event
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Operations -->
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-history"></i> Recent Operations</h5>
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
             </div>
             <div class="card-body">
-                {% if recent_operations %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Field</th>
-                                    <th>Operation</th>
-                                    <th>Hours</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for op in recent_operations %}
-                                <tr>
-                                    <td>{{ op.operation_date }}</td>
-                                    <td>{{ op.field_id }}</td>
-                                    <td>{{ op.operation_type }}</td>
-                                    <td>{{ op.hours_worked or 0 }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('add_field') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="fas fa-map fa-2x d-block mb-2"></i>
+                            <strong>Add Field</strong>
+                        </a>
                     </div>
-                {% else %}
-                    <p class="text-muted">No recent operations recorded.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-trophy"></i> Top Performing Fields</h5>
-            </div>
-            <div class="card-body">
-                {% if top_fields %}
-                    {% for field in top_fields %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>{{ field.field_name }}</span>
-                            <span class="badge bg-success">{{ field.avg_yield }} t/ha</span>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No harvest data available yet.</p>
-                {% endif %}
+                    <div class="col-md-3">
+                        <a href="{{ url_for('add_planting') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="fas fa-seedling fa-2x d-block mb-2"></i>
+                            <strong>New Planting</strong>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('add_operation') }}" class="btn btn-outline-info w-100 py-3">
+                            <i class="fas fa-cogs fa-2x d-block mb-2"></i>
+                            <strong>Log Operation</strong>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('storage_dashboard') }}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="fas fa-warehouse fa-2x d-block mb-2"></i>
+                            <strong>View Storage</strong>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add any dashboard-specific JavaScript here
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+            bar.style.transition = 'width 1s ease-in-out';
+        }, 100);
+    });
+});
+</script>
 {% endblock %}
