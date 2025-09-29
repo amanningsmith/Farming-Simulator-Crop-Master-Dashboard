@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ crop.crop_name }} Storage - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3><i class="fas fa-edit"></i> Edit Storage: {{ crop.crop_name }}</h3>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-secondary">{{ crop.crop_category }}</span>
+                        {% if crop.quantity_stored and crop.storage_capacity %}
+                            {% set usage = (crop.quantity_stored / crop.storage_capacity * 100) %}
+                            <span class="badge bg-{{ 'success' if usage < 50 else 'warning' if usage < 80 else 'danger' }}">
+                                {{ "{:.1f}".format(usage) }}% Full
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Current Status Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h4 class="mb-1">{{ "{:,.1f}".format(crop.quantity_stored) }} t</h4>
+                                <small class="text-muted">Currently Stored</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h4 class="mb-1">${{ "{:,.0f}".format(crop.current_market_price) }}</h4>
+                                <small class="text-muted">Current Price</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h4 class="mb-1">${{ "{:,.0f}".format((crop.quantity_stored * crop.current_market_price)) }}</h4>
+                                <small class="text-muted">Total Value</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Form -->
+                <form method="POST" id="edit-form">
+                    <div class="row">
+                        <!-- Quantity and Capacity -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quantity_stored" class="form-label">
+                                    <i class="fas fa-weight-hanging"></i> Quantity Stored (tonnes) *
+                                </label>
+                                <input type="number" step="0.1" min="0" class="form-control" 
+                                       id="quantity_stored" name="quantity_stored" 
+                                       value="{{ crop.quantity_stored }}" required
+                                       onchange="updateCalculations()">
+                                <div class="form-text">Current amount in storage</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="storage_capacity" class="form-label">
+                                    <i class="fas fa-warehouse"></i> Storage Capacity (tonnes) *
+                                </label>
+                                <input type="number" step="1" min="1" class="form-control" 
+                                       id="storage_capacity" name="storage_capacity" 
+                                       value="{{ crop.storage_capacity }}" required
+                                       onchange="updateCalculations()">
+                                <div class="form-text">Maximum storage capacity</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Capacity Progress Bar -->
+                    <div class="mb-4">
+                        <label class="form-label">Storage Usage</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar" id="capacity-bar" style="width: 0%">
+                                <span id="capacity-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Price and Location -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="current_market_price" class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Current Market Price ($) *
+                                </label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="current_market_price" name="current_market_price" 
+                                       value="{{ crop.current_market_price }}" required
+                                       onchange="updateCalculations()">
+                                <div class="form-text">Price per tonne</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sale_location" class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i> Sale Location
+                                </label>
+                                <select class="form-select" id="sale_location" name="sale_location">
+                                    <option value="">Select location</option>
+                                    {% for location in locations %}
+                                    <option value="{{ location }}" 
+                                            {% if location == crop.sale_location %}selected{% endif %}>
+                                        {{ location }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Where you plan to sell this crop</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Value Display -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h5 class="mb-1">
+                                    <i class="fas fa-calculator"></i> 
+                                    Total Value: <span id="total-value">${{ "{:,.0f}".format((crop.quantity_stored * crop.current_market_price)) }}</span>
+                                </h5>
+                                <small>Quantity × Price = Total Storage Value</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-4">
+                        <label for="notes" class="form-label">
+                            <i class="fas fa-sticky-note"></i> Notes
+                        </label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Additional notes about this crop storage...">{{ crop.notes or '' }}</textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('storage_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="button" class="btn btn-warning" onclick="resetToDefaults()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button type="button" class="btn btn-info" onclick="showPriceHistory()">
+                            <i class="fas fa-chart-line"></i> Price History
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Panel -->
+<div class="row mt-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100" onclick="quickAdd()">
+                            <i class="fas fa-plus"></i><br>
+                            Add Harvest
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-warning w-100" onclick="quickSale()">
+                            <i class="fas fa-truck"></i><br>
+                            Record Sale
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-info w-100" onclick="transferStock()">
+                            <i class="fas fa-exchange-alt"></i><br>
+                            Transfer Stock
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-secondary w-100" onclick="adjustInventory()">
+                            <i class="fas fa-edit"></i><br>
+                            Inventory Adjust
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Price History Modal -->
+<div class="modal fade" id="priceHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Price History - {{ crop.crop_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if price_history %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Price</th>
+                                <th>Location</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in price_history %}
+                            <tr>
+                                <td>{{ record.price_date }}</td>
+                                <td>${{ "{:,.0f}".format(record.price) }}</td>
+                                <td>{{ record.sale_location or 'N/A' }}</td>
+                                <td>{{ record.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No price history available for this crop.</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Modal -->
+<div class="modal fade" id="quickActionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quick-action-title">Quick Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="action-amount" class="form-label">Amount (tonnes)</label>
+                    <input type="number" step="0.1" class="form-control" id="action-amount" placeholder="Enter amount">
+                </div>
+                <div class="mb-3">
+                    <label for="action-notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="action-notes" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-action">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateCalculations() {
+    const quantity = parseFloat(document.getElementById('quantity_stored').value) || 0;
+    const capacity = parseFloat(document.getElementById('storage_capacity').value) || 1;
+    const price = parseFloat(document.getElementById('current_market_price').value) || 0;
+    
+    // Update total value
+    const totalValue = quantity * price;
+    document.getElementById('total-value').textContent = '$' + totalValue.toLocaleString();
+    
+    // Update capacity bar
+    const usage = Math.min((quantity / capacity) * 100, 100);
+    const capacityBar = document.getElementById('capacity-bar');
+    const capacityText = document.getElementById('capacity-text');
+    
+    capacityBar.style.width = usage + '%';
+    capacityText.textContent = usage.toFixed(1) + '%';
+    
+    // Update color based on usage
+    capacityBar.className = 'progress-bar';
+    if (usage < 50) {
+        capacityBar.classList.add('bg-success');
+    } else if (usage < 80) {
+        capacityBar.classList.add('bg-warning');
+    } else {
+        capacityBar.classList.add('bg-danger');
+    }
+    
+    // Show warning if over capacity
+    if (quantity > capacity) {
+        showNotification('Warning: Stored quantity exceeds capacity!', 'warning');
+    }
+}
+
+function resetToDefaults() {
+    if (confirm('Reset all values to their original state?')) {
+        document.getElementById('quantity_stored').value = {{ crop.quantity_stored }};
+        document.getElementById('storage_capacity').value = {{ crop.storage_capacity }};
+        document.getElementById('current_market_price').value = {{ crop.current_market_price }};
+        document.getElementById('sale_location').value = '{{ crop.sale_location }}';
+        document.getElementById('notes').value = '{{ crop.notes or '' }}';
+        updateCalculations();
+    }
+}
+
+function showPriceHistory() {
+    const modal = new bootstrap.Modal(document.getElementById('priceHistoryModal'));
+    modal.show();
+}
+
+// Quick action functions
+function quickAdd() {
+    showQuickAction('Add Harvest', 'add');
+}
+
+function quickSale() {
+    showQuickAction('Record Sale', 'subtract');
+}
+
+function transferStock() {
+    showQuickAction('Transfer Stock', 'subtract');
+}
+
+function adjustInventory() {
+    showQuickAction('Inventory Adjustment', 'set');
+}
+
+function showQuickAction(title, action) {
+    document.getElementById('quick-action-title').textContent = title;
+    document.getElementById('confirm-action').onclick = function() {
+        executeQuickAction(action);
+    };
+    
+    const modal = new bootstrap.Modal(document.getElementById('quickActionModal'));
+    modal.show();
+}
+
+function executeQuickAction(action) {
+    const amount = parseFloat(document.getElementById('action-amount').value);
+    const notes = document.getElementById('action-notes').value;
+    
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+    }
+    
+    const currentQuantity = parseFloat(document.getElementById('quantity_stored').value);
+    let newQuantity;
+    
+    switch(action) {
+        case 'add':
+            newQuantity = currentQuantity + amount;
+            break;
+        case 'subtract':
+            newQuantity = Math.max(0, currentQuantity - amount);
+            break;
+        case 'set':
+            newQuantity = amount;
+            break;
+    }
+    
+    document.getElementById('quantity_stored').value = newQuantity;
+    updateCalculations();
+    
+    // Close modal and clear form
+    bootstrap.Modal.getInstance(document.getElementById('quickActionModal')).hide();
+    document.getElementById('action-amount').value = '';
+    document.getElementById('action-notes').value = '';
+    
+    showNotification('Quantity updated! Remember to save your changes.', 'info');
+}
+
+// Initialize calculations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateCalculations();
+});
+</script>
+{% endblock %}

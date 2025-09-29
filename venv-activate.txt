@@ -1,0 +1,1 @@
+fs25_env\Scripts\activate

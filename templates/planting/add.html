@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Add Planting Record - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-seedling"></i> New Planting Record</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_id" class="form-label">Field *</label>
+                                <select class="form-select" id="field_id" name="field_id" required onchange="updateAreaSuggestion()">
+                                    <option value="">Select field</option>
+                                    {% for field in fields %}
+                                    <option value="{{ field.field_id }}" data-area="{{ field.size_hectares }}">
+                                        {{ field.field_name }} - {{ field.size_hectares }} ha
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="planting_date" class="form-label">Planting Date *</label>
+                                <input type="date" class="form-control" id="planting_date" name="planting_date" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="crop_type" class="form-label">Crop Type *</label>
+                                <select class="form-select" id="crop_type" name="crop_type" required>
+                                    <option value="">Select crop</option>
+                                    <option value="Wheat">Wheat</option>
+                                    <option value="Corn">Corn</option>
+                                    <option value="Soybeans">Soybeans</option>
+                                    <option value="Rice">Rice</option>
+                                    <option value="Barley">Barley</option>
+                                    <option value="Oat">Oat</option>
+                                    <option value="Canola">Canola</option>
+                                    <option value="Sunflower">Sunflower</option>
+                                    <option value="Potato">Potato</option>
+                                    <option value="Sugar Beet">Sugar Beet</option>
+                                    <option value="Spinach">Spinach</option>
+                                    <option value="Green Beans">Green Beans</option>
+                                    <option value="Peas">Peas</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="variety" class="form-label">Variety</label>
+                                <input type="text" class="form-control" id="variety" name="variety" 
+                                       placeholder="e.g., Pioneer P1234">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="planting_season" class="form-label">Season</label>
+                                <select class="form-select" id="planting_season" name="planting_season">
+                                    <option value="">Select season</option>
+                                    <option value="Spring">Spring</option>
+                                    <option value="Summer">Summer</option>
+                                    <option value="Fall">Fall</option>
+                                    <option value="Winter">Winter</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="planted_area_ha" class="form-label">Planted Area (hectares) *</label>
+                                <input type="number" step="0.1" min="0.1" class="form-control" 
+                                       id="planted_area_ha" name="planted_area_ha" required
+                                       onchange="calculateTotals()">
+                                <div class="form-text" id="area-suggestion"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="expected_harvest_date" class="form-label">Expected Harvest Date</label>
+                                <input type="date" class="form-control" id="expected_harvest_date" name="expected_harvest_date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Costs Section -->
+                    <h5 class="mb-3 mt-4">Planting Costs</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="seed_cost" class="form-label">Seed Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="seed_cost" name="seed_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="seed_rate" class="form-label">Seed Rate</label>
+                                <input type="text" class="form-control" id="seed_rate" name="seed_rate" 
+                                       placeholder="e.g., 120 kg/ha">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="fertilizer_cost" class="form-label">Fertilizer Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="fertilizer_cost" name="fertilizer_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="lime_cost" class="form-label">Lime Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="lime_cost" name="lime_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="labor_cost" class="form-label">Labor Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="labor_cost" name="labor_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="equipment_cost" class="form-label">Equipment Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="equipment_cost" name="equipment_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="fuel_cost" class="form-label">Fuel Cost ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="fuel_cost" name="fuel_cost" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="other_costs" class="form-label">Other Costs ($)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="other_costs" name="other_costs" value="0" onchange="calculateTotals()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Summary -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Total Planting Cost: $<span id="total-cost">0.00</span></h5>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h5>Cost per Hectare: $<span id="cost-per-ha">0.00</span>/ha</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Operation Details -->
+                    <h5 class="mb-3 mt-4">Operation Details</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="planting_method" class="form-label">Planting Method</label>
+                                <select class="form-select" id="planting_method" name="planting_method">
+                                    <option value="">Select method</option>
+                                    <option value="Direct Seed">Direct Seed</option>
+                                    <option value="No-Till">No-Till</option>
+                                    <option value="Conventional">Conventional</option>
+                                    <option value="Precision Planting">Precision Planting</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="soil_temp_c" class="form-label">Soil Temperature (°C)</label>
+                                <input type="number" step="0.1" class="form-control" id="soil_temp_c" name="soil_temp_c">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="soil_moisture" class="form-label">Soil Moisture</label>
+                                <select class="form-select" id="soil_moisture" name="soil_moisture">
+                                    <option value="">Select condition</option>
+                                    <option value="Dry">Dry</option>
+                                    <option value="Adequate">Adequate</option>
+                                    <option value="Wet">Wet</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="weather_conditions" class="form-label">Weather Conditions</label>
+                                <input type="text" class="form-control" id="weather_conditions" name="weather_conditions" 
+                                       placeholder="e.g., Sunny, 18°C">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="operator_name" class="form-label">Operator</label>
+                                <input type="text" class="form-control" id="operator_name" name="operator_name" 
+                                       placeholder="Person who did the planting">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Any additional notes about this planting..."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Planting Record
+                        </button>
+                        <a href="{{ url_for('planting_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateAreaSuggestion() {
+    const select = document.getElementById('field_id');
+    const option = select.options[select.selectedIndex];
+    const area = option.getAttribute('data-area');
+    const suggestion = document.getElementById('area-suggestion');
+    const areaInput = document.getElementById('planted_area_ha');
+    
+    if (area) {
+        suggestion.textContent = `Field size: ${area} hectares`;
+        areaInput.value = area;
+        calculateTotals();
+    }
+}
+
+function calculateTotals() {
+    const seed = parseFloat(document.getElementById('seed_cost').value) || 0;
+    const fertilizer = parseFloat(document.getElementById('fertilizer_cost').value) || 0;
+    const lime = parseFloat(document.getElementById('lime_cost').value) || 0;
+    const labor = parseFloat(document.getElementById('labor_cost').value) || 0;
+    const equipment = parseFloat(document.getElementById('equipment_cost').value) || 0;
+    const fuel = parseFloat(document.getElementById('fuel_cost').value) || 0;
+    const other = parseFloat(document.getElementById('other_costs').value) || 0;
+    const area = parseFloat(document.getElementById('planted_area_ha').value) || 1;
+    
+    const total = seed + fertilizer + lime + labor + equipment + fuel + other;
+    const perHa = total / area;
+    
+    document.getElementById('total-cost').textContent = total.toFixed(2);
+    document.getElementById('cost-per-ha').textContent = perHa.toFixed(2);
+}
+
+// Set today's date as default
+document.getElementById('planting_date').valueAsDate = new Date();
+
+// Initialize calculations
+calculateTotals();
+</script>
+{% endblock %}

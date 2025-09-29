@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% block title %}Crop Storage Dashboard - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-warehouse"></i> Crop Storage Dashboard</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('manage_locations') }}" class="btn btn-outline-info">
+            <i class="fas fa-map-marker-alt"></i> Manage Locations
+        </a>
+        <button class="btn btn-info" onclick="toggleEditMode()">
+            <i class="fas fa-edit"></i> <span id="edit-mode-text">Enable Quick Edit</span>
+        </button>
+        <button class="btn btn-success" onclick="refreshPrices()">
+            <i class="fas fa-sync"></i> Refresh Prices
+        </button>
+    </div>
+</div>
+
+<!-- Edit Mode Indicator -->
+<div id="edit-mode-alert" class="alert alert-info d-none">
+    <i class="fas fa-info-circle"></i> 
+    <strong>Quick Edit Mode:</strong> Click on any value to edit it directly. 
+    <span class="ms-2">
+        <kbd>Enter</kbd> to save, <kbd>Esc</kbd> to cancel
+    </span>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number" id="total-value-display">${{ "{:,.0f}".format(total_value) }}</div>
+                <div class="stats-label">Total Storage Value</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number" id="total-stored-display">{{ "{:,.0f}".format(total_stored) }}</div>
+                <div class="stats-label">Total Stored (tonnes)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number">{{ "{:,.0f}".format(total_capacity) }}</div>
+                <div class="stats-label">Total Capacity (tonnes)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number" id="visible-crops">{{ crops|length }}</div>
+                <div class="stats-label">Total Crops</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label for="search-input" class="form-label">
+                    <i class="fas fa-search"></i> Search Crops
+                </label>
+                <input type="text" class="form-control" id="search-input" 
+                       placeholder="Search by crop name..." onkeyup="filterTable()">
+            </div>
+            <div class="col-md-3">
+                <label for="category-filter" class="form-label">
+                    <i class="fas fa-filter"></i> Filter by Category
+                </label>
+                <select class="form-select" id="category-filter" onchange="filterTable()">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="storage-filter" class="form-label">Storage Status</label>
+                <select class="form-select" id="storage-filter" onchange="filterTable()">
+                    <option value="">All Items</option>
+                    <option value="empty">Empty (0 qty)</option>
+                    <option value="low">Low (&lt;25%)</option>
+                    <option value="medium">Medium (25-75%)</option>
+                    <option value="high">High (&gt;75%)</option>
+                    <option value="full">Over Capacity</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="sort-by" class="form-label">Sort By</label>
+                <select class="form-select" id="sort-by" onchange="sortTable()">
+                    <option value="name">Name A-Z</option>
+                    <option value="category">Category</option>
+                    <option value="quantity">Quantity</option>
+                    <option value="value">Total Value</option>
+                    <option value="capacity">Capacity Used</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()" title="Clear all filters">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12">
+                <small class="text-muted">
+                    Showing <span id="visible-count">{{ crops|length }}</span> of {{ crops|length }} crops
+                    | <span id="visible-value">$0</span> total value visible
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Crop Storage Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="storage-table">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                        </th>
+                        <th>Crop</th>
+                        <th>Category</th>
+                        <th>Stored (t)</th>
+                        <th>Capacity (t)</th>
+                        <th>Usage</th>
+                        <th>Price ($)</th>
+                        <th>Sale Location</th>
+                        <th>Total Value</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for crop in crops %}
+                    <tr data-crop="{{ crop.crop_name }}" data-category="{{ crop.crop_category }}" 
+                        data-quantity="{{ crop.quantity_stored }}" data-capacity="{{ crop.storage_capacity }}"
+                        data-usage="{{ crop.capacity_used }}" data-value="{{ crop.total_value }}">
+                        <td>
+                            <input type="checkbox" class="crop-checkbox" value="{{ crop.crop_name }}">
+                        </td>
+                        <td>
+                            <strong>{{ crop.crop_name }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ crop.crop_category }}</span>
+                        </td>
+                        <td>
+                            <span class="editable-field" 
+                                  data-crop="{{ crop.crop_name }}" 
+                                  data-field="quantity_stored"
+                                  data-type="number"
+                                  data-value="{{ crop.quantity_stored }}">
+                                {{ "{:,.1f}".format(crop.quantity_stored) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="editable-field" 
+                                  data-crop="{{ crop.crop_name }}" 
+                                  data-field="storage_capacity"
+                                  data-type="number"
+                                  data-value="{{ crop.storage_capacity }}">
+                                {{ "{:,.0f}".format(crop.storage_capacity) }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 20px; min-width: 80px;">
+                                <div class="progress-bar capacity-bar
+                                    {% if crop.capacity_used < 25 %}bg-success
+                                    {% elif crop.capacity_used < 75 %}bg-warning
+                                    {% elif crop.capacity_used < 100 %}bg-info
+                                    {% else %}bg-danger{% endif %}"
+                                     style="width: {{ min(crop.capacity_used, 100) }}%"
+                                     data-crop="{{ crop.crop_name }}">
+                                    <span class="capacity-text">{{ crop.capacity_used }}%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="editable-field" 
+                                  data-crop="{{ crop.crop_name }}" 
+                                  data-field="current_market_price"
+                                  data-type="number"
+                                  data-value="{{ crop.current_market_price }}">
+                                {{ "{:,.0f}".format(crop.current_market_price) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="editable-field" 
+                                  data-crop="{{ crop.crop_name }}" 
+                                  data-field="sale_location"
+                                  data-type="select"
+                                  data-value="{{ crop.sale_location }}">
+                                {{ crop.sale_location }}
+                            </span>
+                        </td>
+                        <td>
+                            <strong class="total-value" data-crop="{{ crop.crop_name }}">
+                                ${{ "{:,.0f}".format(crop.total_value) }}
+                            </strong>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('edit_crop_storage', crop_name=crop.crop_name) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="quickAdjust('{{ crop.crop_name }}', 'add')" title="Add quantity">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" 
+                                        onclick="quickAdjust('{{ crop.crop_name }}', 'subtract')" title="Subtract quantity">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="card mt-3">
+    <div class="card-body">
+        <h6><i class="fas fa-tasks"></i> Bulk Actions</h6>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary" onclick="bulkEditSelected()" disabled id="bulk-edit-btn">
+                <i class="fas fa-edit"></i> Edit Selected
+            </button>
+            <button class="btn btn-outline-success" onclick="bulkUpdatePrices()" disabled id="bulk-price-btn">
+                <i class="fas fa-dollar-sign"></i> Update Prices
+            </button>
+            <button class="btn btn-outline-info" onclick="exportSelected()" disabled id="bulk-export-btn">
+                <i class="fas fa-download"></i> Export Selected
+            </button>
+            <button class="btn btn-outline-secondary" onclick="selectByFilter()">
+                <i class="fas fa-filter"></i> Select Filtered
+            </button>
+        </div>
+        <small class="text-muted mt-2 d-block">
+            <span id="selected-count">0</span> items selected
+        </small>
+    </div>
+</div>
+
+<!-- Quick Adjust Modal (same as before) -->
+<div class="modal fade" id="quickAdjustModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Adjust - <span id="adjust-crop-name"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="adjust-amount" class="form-label">Amount (tonnes)</label>
+                    <input type="number" step="0.1" class="form-control" id="adjust-amount" placeholder="Enter amount">
+                </div>
+                <div class="mb-3">
+                    <label for="adjust-reason" class="form-label">Reason</label>
+                    <select class="form-select" id="adjust-reason">
+                        <option value="harvest">Harvest</option>
+                        <option value="sale">Sale</option>
+                        <option value="transfer">Transfer</option>
+                        <option value="loss">Loss/Spoilage</option>
+                        <option value="correction">Inventory Correction</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirm-adjust">
+                    <span id="adjust-action">Add</span> Amount
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let editMode = false;
+let saleLocations = [];
+
+// Load sale locations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSaleLocations();
+    updateVisibleStats();
+});
+
+function loadSaleLocations() {
+    fetch('/storage/get-locations')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                saleLocations = data.locations;
+            }
+        })
+        .catch(error => console.error('Error loading locations:', error));
+}
+
+// Search and Filter Functions
+function filterTable() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const categoryFilter = document.getElementById('category-filter').value;
+    const storageFilter = document.getElementById('storage-filter').value;
+    
+    const rows = document.querySelectorAll('#storage-table tbody tr');
+    let visibleCount = 0;
+    let visibleValue = 0;
+    
+    rows.forEach(row => {
+        const cropName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const category = row.dataset.category;
+        const usage = parseFloat(row.dataset.usage);
+        const quantity = parseFloat(row.dataset.quantity);
+        const value = parseFloat(row.dataset.value);
+        
+        let show = true;
+        
+        // Search filter
+        if (searchTerm && !cropName.includes(searchTerm)) {
+            show = false;
+        }
+        
+        // Category filter
+        if (categoryFilter && category !== categoryFilter) {
+            show = false;
+        }
+        
+        // Storage status filter
+        if (storageFilter) {
+            switch(storageFilter) {
+                case 'empty':
+                    if (quantity > 0) show = false;
+                    break;
+                case 'low':
+                    if (usage >= 25) show = false;
+                    break;
+                case 'medium':
+                    if (usage < 25 || usage > 75) show = false;
+                    break;
+                case 'high':
+                    if (usage <= 75 || usage > 100) show = false;
+                    break;
+                case 'full':
+                    if (usage <= 100) show = false;
+                    break;
+            }
+        }
+        
+        if (show) {
+            row.style.display = '';
+            visibleCount++;
+            visibleValue += value;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update counters
+    document.getElementById('visible-count').textContent = visibleCount;
+    document.getElementById('visible-crops').textContent = visibleCount;
+    document.getElementById('visible-value').textContent = '$' + visibleValue.toLocaleString();
+}
+
+function sortTable() {
+    const sortBy = document.getElementById('sort-by').value;
+    const tbody = document.querySelector('#storage-table tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(sortBy) {
+            case 'name':
+                aVal = a.querySelector('td:nth-child(2)').textContent;
+                bVal = b.querySelector('td:nth-child(2)').textContent;
+                return aVal.localeCompare(bVal);
+            case 'category':
+                aVal = a.dataset.category;
+                bVal = b.dataset.category;
+                return aVal.localeCompare(bVal);
+            case 'quantity':
+                aVal = parseFloat(a.dataset.quantity);
+                bVal = parseFloat(b.dataset.quantity);
+                return bVal - aVal; // Descending
+            case 'value':
+                aVal = parseFloat(a.dataset.value);
+                bVal = parseFloat(b.dataset.value);
+                return bVal - aVal; // Descending
+            case 'capacity':
+                aVal = parseFloat(a.dataset.usage);
+                bVal = parseFloat(b.dataset.usage);
+                return bVal - aVal; // Descending
+        }
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function clearFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('category-filter').value = '';
+    document.getElementById('storage-filter').value = '';
+    document.getElementById('sort-by').value = 'name';
+    filterTable();
+    sortTable();
+}
+
+// Checkbox selection functions
+function toggleSelectAll() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.crop-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        // Only select visible rows
+        const row = checkbox.closest('tr');
+        if (row.style.display !== 'none') {
+            checkbox.checked = selectAll.checked;
+        }
+    });
+    
+    updateBulkButtons();
+}
+
+function updateBulkButtons() {
+    const checkedBoxes = document.querySelectorAll('.crop-checkbox:checked');
+    const count = checkedBoxes.length;
+    
+    document.getElementById('selected-count').textContent = count;
+    
+    // Enable/disable bulk action buttons
+    const bulkButtons = ['bulk-edit-btn', 'bulk-price-btn', 'bulk-export-btn'];
+    bulkButtons.forEach(btnId => {
+        document.getElementById(btnId).disabled = count === 0;
+    });
+}
+
+function selectByFilter() {
+    const visibleCheckboxes = document.querySelectorAll('.crop-checkbox');
+    visibleCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        if (row.style.display !== 'none') {
+            checkbox.checked = true;
+        }
+    });
+    updateBulkButtons();
+}
+
+// Add event listeners to checkboxes
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('crop-checkbox')) {
+        updateBulkButtons();
+    }
+});
+
+function updateVisibleStats() {
+    filterTable(); // This updates the visible counts
+}
+
+// Rest of your existing JavaScript functions (toggleEditMode, inline editing, etc.)
+// ... (include all the previous JavaScript functions from the original dashboard)
+
+// Existing functions from previous version
+function toggleEditMode() {
+    editMode = !editMode;
+    const editButton = document.getElementById('edit-mode-text');
+    const editAlert = document.getElementById('edit-mode-alert');
+    
+    if (editMode) {
+        editButton.textContent = 'Disable Quick Edit';
+        editAlert.classList.remove('d-none');
+        document.querySelectorAll('.editable-field').forEach(el => {
+            el.classList.add('editable-active');
+            el.style.cursor = 'pointer';
+            el.style.borderBottom = '1px dashed #007bff';
+        });
+    } else {
+        editButton.textContent = 'Enable Quick Edit';
+        editAlert.classList.add('d-none');
+        document.querySelectorAll('.editable-field').forEach(el => {
+            el.classList.remove('editable-active');
+            el.style.cursor = 'default';
+            el.style.borderBottom = 'none';
+        });
+    }
+}
+
+// Add your existing inline editing functions here...
+// (startEdit, updateField, etc. from the previous version)
+
+</script>
+
+<style>
+.editable-active {
+    transition: all 0.2s ease;
+}
+
+.editable-active:hover {
+    background-color: #f8f9fa;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+.capacity-bar {
+    transition: all 0.3s ease;
+}
+
+.progress {
+    position: relative;
+}
+
+.capacity-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}

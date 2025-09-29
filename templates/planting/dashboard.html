@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Planting Dashboard - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-seedling"></i> Planting Operations</h1>
+    <a href="{{ url_for('add_planting') }}" class="btn btn-success">
+        <i class="fas fa-plus"></i> New Planting Record
+    </a>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number">{{ active_plantings }}</div>
+                <div class="stats-label">Active Plantings</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number">{{ "{:,.1f}".format(total_planted_area) }}</div>
+                <div class="stats-label">Hectares Planted</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number">${{ "{:,.0f}".format(total_costs) }}</div>
+                <div class="stats-label">Total Investment</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="stats-number">{{ plantings|length }}</div>
+                <div class="stats-label">Total Records</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Planting Records Table -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-list"></i> Planting Records</h5>
+    </div>
+    <div class="card-body">
+        {% if plantings %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Planting Date</th>
+                        <th>Field</th>
+                        <th>Crop</th>
+                        <th>Variety</th>
+                        <th>Area (ha)</th>
+                        <th>Season</th>
+                        <th>Total Cost</th>
+                        <th>Status</th>
+                        <th>Maintenance</th>
+                        <th>Harvest</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in plantings %}
+                    <tr>
+                        <td>{{ p.planting_date }}</td>
+                        <td>
+                            <strong>{{ p.field_name }}</strong>
+                            <br><small class="text-muted">{{ p.field_id }}</small>
+                        </td>
+                        <td><strong>{{ p.crop_type }}</strong></td>
+                        <td>{{ p.variety or '-' }}</td>
+                        <td>{{ "{:.1f}".format(p.planted_area_ha) }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ p.planting_season or 'N/A' }}</span>
+                        </td>
+                        <td>${{ "{:,.0f}".format(p.total_planting_cost) }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if p.status == 'Active' else 'secondary' if p.status == 'Harvested' else 'warning' }}">
+                                {{ p.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ p.maintenance_count }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if p.harvest_count > 0 else 'secondary' }}">
+                                {{ p.harvest_count }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('planting_detail', planting_id=p.planting_id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-seedling fa-3x text-muted mb-3"></i>
+            <h4>No Planting Records</h4>
+            <p class="text-muted">Start tracking your planting operations.</p>
+            <a href="{{ url_for('add_planting') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add First Planting
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

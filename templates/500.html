@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-1">500</h1>
+    <p class="fs-3"><span class="text-danger">Oops!</span> Something went wrong.</p>
+    <p class="lead">We're working to fix the problem.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-success">Go Home</a>
+</div>
+{% endblock %}
