@@ -504,83 +504,6 @@ def record_harvest(season_id):
     return render_template('crops/harvest.html', season=season)
 
 # =====================================================
-# OPERATIONS MANAGEMENT ROUTES
-# =====================================================
-
-@app.route('/operations')
-def operations_list():
-    """List field operations"""
-    conn = get_db_connection()
-    if not conn:
-        return redirect(url_for('index'))
-    
-    try:
-        operations = conn.execute('''
-            SELECT fo.operation_id, fo.operation_date, fo.field_id, f.field_name, 
-                   fo.operation_type, fo.hours_worked, fo.fuel_used_liters, 
-                   fo.quality_rating, fo.weather_conditions
-            FROM field_operations fo
-            JOIN fields f ON fo.field_id = f.field_id
-            ORDER BY fo.operation_date DESC
-            LIMIT 100
-        ''').fetchall()
-        
-        conn.close()
-        return render_template('operations/list.html', operations=operations)
-    
-    except Exception as e:
-        flash(f'Error loading operations: {str(e)}', 'error')
-        conn.close()
-        return redirect(url_for('index'))
-
-@app.route('/operations/add', methods=['GET', 'POST'])
-def add_operation():
-    """Add field operation"""
-    conn = get_db_connection()
-    if not conn:
-        return redirect(url_for('index'))
-    
-    # Get available fields
-    fields = conn.execute('SELECT field_id, field_name FROM fields ORDER BY field_name').fetchall()
-    
-    if request.method == 'POST':
-        try:
-            operation_data = {
-                'field_id': request.form['field_id'],
-                'operation_date': request.form['operation_date'],
-                'operation_type': request.form['operation_type'],
-                'hours_worked': float(request.form.get('hours_worked', 0)),
-                'fuel_used_liters': float(request.form.get('fuel_used_liters', 0)),
-                'weather_conditions': request.form.get('weather_conditions', '').strip(),
-                'quality_rating': int(request.form.get('quality_rating', 8)),
-                'notes': request.form.get('notes', '').strip()
-            }
-            
-            conn.execute('''
-                INSERT INTO field_operations (field_id, operation_date, operation_type,
-                                             hours_worked, fuel_used_liters,
-                                             weather_conditions, quality_rating, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                operation_data['field_id'], operation_data['operation_date'],
-                operation_data['operation_type'], operation_data['hours_worked'],
-                operation_data['fuel_used_liters'], operation_data['weather_conditions'],
-                operation_data['quality_rating'], operation_data['notes']
-            ))
-            
-            conn.commit()
-            conn.close()
-            
-            flash(f'{operation_data["operation_type"]} operation logged successfully!', 'success')
-            return redirect(url_for('operations_list'))
-            
-        except Exception as e:
-            flash(f'Error logging operation: {str(e)}', 'error')
-    
-    conn.close()
-    return render_template('operations/add.html', fields=fields)
-
-# =====================================================
 # WEATHER EVENTS ROUTES
 # =====================================================
 
@@ -1884,6 +1807,211 @@ def edit_maintenance(maintenance_id):
     conn = get_db_connection()
     if not conn:
         return redirect(url_for('maintenance_list'))
+    
+# =====================================================
+# OPERATIONS MANAGEMENT ROUTES
+# Replace your existing operations section with this
+# =====================================================
+
+@app.route('/operations')
+def operations_list():
+    """List all field operations"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    
+    try:
+        operations = conn.execute('''
+            SELECT fo.operation_id, fo.operation_date, fo.field_id, f.field_name, 
+                   fo.operation_type, fo.hours_worked, fo.fuel_used_liters, 
+                   fo.quality_rating, fo.weather_conditions, fo.operator_name
+            FROM field_operations fo
+            JOIN fields f ON fo.field_id = f.field_id
+            ORDER BY fo.operation_date DESC
+            LIMIT 100
+        ''').fetchall()
+        
+        # Get summary statistics
+        total_operations = conn.execute('SELECT COUNT(*) as count FROM field_operations').fetchone()['count']
+        
+        total_hours = conn.execute('''
+            SELECT SUM(hours_worked) as total FROM field_operations 
+            WHERE hours_worked IS NOT NULL
+        ''').fetchone()['total'] or 0
+        
+        total_fuel = conn.execute('''
+            SELECT SUM(fuel_used_liters) as total FROM field_operations 
+            WHERE fuel_used_liters IS NOT NULL
+        ''').fetchone()['total'] or 0
+        
+        conn.close()
+        return render_template('operations/list.html', 
+                             operations=operations,
+                             total_operations=total_operations,
+                             total_hours=round(total_hours, 1),
+                             total_fuel=round(total_fuel, 1))
+    
+    except Exception as e:
+        flash(f'Error loading operations: {str(e)}', 'error')
+        if conn:
+            conn.close()
+        return redirect(url_for('index'))
+
+
+@app.route('/operations/add', methods=['GET', 'POST'])
+def add_operation():
+    """Add field operation"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    
+    # Get available fields
+    fields = conn.execute('SELECT field_id, field_name FROM fields ORDER BY field_name').fetchall()
+    
+    # Get available crop seasons (optional link)
+    seasons = conn.execute('''
+        SELECT season_id, field_id, crop_type, crop_year, season_name
+        FROM crop_seasons
+        ORDER BY crop_year DESC, planting_date DESC
+        LIMIT 50
+    ''').fetchall()
+    
+    if request.method == 'POST':
+        try:
+            operation_data = {
+                'field_id': request.form['field_id'],
+                'operation_date': request.form['operation_date'],
+                'operation_type': request.form['operation_type'],
+                'hours_worked': float(request.form.get('hours_worked', 0)) if request.form.get('hours_worked') else None,
+                'fuel_used_liters': float(request.form.get('fuel_used_liters', 0)) if request.form.get('fuel_used_liters') else None,
+                'weather_conditions': request.form.get('weather_conditions', '').strip(),
+                'quality_rating': int(request.form.get('quality_rating', 8)) if request.form.get('quality_rating') else None,
+                'operator_name': request.form.get('operator_name', '').strip(),
+                'average_speed_kmh': float(request.form.get('average_speed_kmh', 0)) if request.form.get('average_speed_kmh') else None,
+                'soil_moisture_percent': float(request.form.get('soil_moisture_percent', 0)) if request.form.get('soil_moisture_percent') else None,
+                'notes': request.form.get('notes', '').strip()
+            }
+            
+            # Optional season link
+            season_id = request.form.get('season_id')
+            operation_data['season_id'] = int(season_id) if season_id and season_id != '' else None
+            
+            conn.execute('''
+                INSERT INTO field_operations (
+                    field_id, season_id, operation_date, operation_type,
+                    hours_worked, fuel_used_liters, weather_conditions, 
+                    quality_rating, operator_name, average_speed_kmh,
+                    soil_moisture_percent, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                operation_data['field_id'], operation_data['season_id'],
+                operation_data['operation_date'], operation_data['operation_type'],
+                operation_data['hours_worked'], operation_data['fuel_used_liters'],
+                operation_data['weather_conditions'], operation_data['quality_rating'],
+                operation_data['operator_name'], operation_data['average_speed_kmh'],
+                operation_data['soil_moisture_percent'], operation_data['notes']
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            flash(f'{operation_data["operation_type"]} operation logged successfully!', 'success')
+            return redirect(url_for('operations_list'))
+            
+        except Exception as e:
+            flash(f'Error logging operation: {str(e)}', 'error')
+            if conn:
+                conn.close()
+            return redirect(url_for('add_operation'))
+    
+    conn.close()
+    return render_template('operations/add.html', fields=fields, seasons=seasons)
+
+
+@app.route('/operations/<int:operation_id>/edit', methods=['GET', 'POST'])
+def edit_operation(operation_id):
+    """Edit existing operation"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('operations_list'))
+    
+    # Get operation
+    operation = conn.execute('''
+        SELECT fo.*, f.field_name
+        FROM field_operations fo
+        JOIN fields f ON fo.field_id = f.field_id
+        WHERE fo.operation_id = ?
+    ''', (operation_id,)).fetchone()
+    
+    if not operation:
+        flash('Operation not found!', 'error')
+        conn.close()
+        return redirect(url_for('operations_list'))
+    
+    # Get available fields
+    fields = conn.execute('SELECT field_id, field_name FROM fields ORDER BY field_name').fetchall()
+    
+    if request.method == 'POST':
+        try:
+            operation_data = {
+                'field_id': request.form['field_id'],
+                'operation_date': request.form['operation_date'],
+                'operation_type': request.form['operation_type'],
+                'hours_worked': float(request.form.get('hours_worked', 0)) if request.form.get('hours_worked') else None,
+                'fuel_used_liters': float(request.form.get('fuel_used_liters', 0)) if request.form.get('fuel_used_liters') else None,
+                'weather_conditions': request.form.get('weather_conditions', '').strip(),
+                'quality_rating': int(request.form.get('quality_rating', 8)) if request.form.get('quality_rating') else None,
+                'operator_name': request.form.get('operator_name', '').strip(),
+                'notes': request.form.get('notes', '').strip()
+            }
+            
+            conn.execute('''
+                UPDATE field_operations 
+                SET field_id = ?, operation_date = ?, operation_type = ?,
+                    hours_worked = ?, fuel_used_liters = ?, weather_conditions = ?,
+                    quality_rating = ?, operator_name = ?, notes = ?
+                WHERE operation_id = ?
+            ''', (
+                operation_data['field_id'], operation_data['operation_date'],
+                operation_data['operation_type'], operation_data['hours_worked'],
+                operation_data['fuel_used_liters'], operation_data['weather_conditions'],
+                operation_data['quality_rating'], operation_data['operator_name'],
+                operation_data['notes'], operation_id
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            flash('Operation updated successfully!', 'success')
+            return redirect(url_for('operations_list'))
+            
+        except Exception as e:
+            flash(f'Error updating operation: {str(e)}', 'error')
+    
+    conn.close()
+    return render_template('operations/edit.html', operation=operation, fields=fields)
+
+
+@app.route('/operations/<int:operation_id>/delete', methods=['POST'])
+def delete_operation(operation_id):
+    """Delete operation"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('operations_list'))
+    
+    try:
+        conn.execute('DELETE FROM field_operations WHERE operation_id = ?', (operation_id,))
+        conn.commit()
+        conn.close()
+        
+        flash('Operation deleted successfully!', 'success')
+        return redirect(url_for('operations_list'))
+        
+    except Exception as e:
+        flash(f'Error deleting operation: {str(e)}', 'error')
+        if conn:
+            conn.close()
+        return redirect(url_for('operations_list'))
 
 # =====================================================
 # ERROR HANDLERS AND UTILITY ROUTES

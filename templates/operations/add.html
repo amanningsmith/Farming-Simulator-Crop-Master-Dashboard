@@ -1,1 +1,214 @@
-<!-- Log operation -->
+{% extends "base.html" %}
+
+{% block title %}Log Operation - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-cogs"></i> Log Field Operation</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">Operation Details</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_id" class="form-label">Field *</label>
+                                <select class="form-select" id="field_id" name="field_id" required>
+                                    <option value="">Select field</option>
+                                    {% for field in fields %}
+                                    <option value="{{ field.field_id }}">{{ field.field_name }} ({{ field.field_id }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="operation_date" class="form-label">Operation Date *</label>
+                                <input type="date" class="form-control" id="operation_date" 
+                                       name="operation_date" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="operation_type" class="form-label">Operation Type *</label>
+                                <select class="form-select" id="operation_type" name="operation_type" required>
+                                    <option value="">Select operation</option>
+                                    <option value="Plowing">Plowing</option>
+                                    <option value="Cultivating">Cultivating</option>
+                                    <option value="Planting">Planting</option>
+                                    <option value="Fertilizing">Fertilizing</option>
+                                    <option value="Spraying">Spraying</option>
+                                    <option value="Weeding">Weeding</option>
+                                    <option value="Irrigating">Irrigating</option>
+                                    <option value="Harvesting">Harvesting</option>
+                                    <option value="Mowing">Mowing</option>
+                                    <option value="Baling">Baling</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="operator_name" class="form-label">Operator Name</label>
+                                <input type="text" class="form-control" id="operator_name" 
+                                       name="operator_name" placeholder="Person who performed operation">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional Season Link -->
+                    {% if seasons %}
+                    <div class="mb-3">
+                        <label for="season_id" class="form-label">
+                            <i class="fas fa-link"></i> Link to Crop Season (Optional)
+                        </label>
+                        <select class="form-select" id="season_id" name="season_id">
+                            <option value="">Not linked to specific crop</option>
+                            {% for season in seasons %}
+                            <option value="{{ season.season_id }}">
+                                {{ season.crop_type }} - {{ season.field_id }} - {{ season.crop_year }}
+                                {% if season.season_name %}({{ season.season_name }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Link this operation to a specific crop planting</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Work Details -->
+                    <h5 class="mb-3 mt-4">Work Details</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="hours_worked" class="form-label">Hours Worked</label>
+                                <input type="number" step="0.1" min="0" class="form-control" 
+                                       id="hours_worked" name="hours_worked" placeholder="0.0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="fuel_used_liters" class="form-label">Fuel Used (L)</label>
+                                <input type="number" step="0.1" min="0" class="form-control" 
+                                       id="fuel_used_liters" name="fuel_used_liters" placeholder="0.0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="average_speed_kmh" class="form-label">Avg Speed (km/h)</label>
+                                <input type="number" step="0.1" min="0" class="form-control" 
+                                       id="average_speed_kmh" name="average_speed_kmh" placeholder="0.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conditions -->
+                    <h5 class="mb-3 mt-4">Field Conditions</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="weather_conditions" class="form-label">Weather Conditions</label>
+                                <input type="text" class="form-control" id="weather_conditions" 
+                                       name="weather_conditions" placeholder="e.g., Sunny, 22°C">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="soil_moisture_percent" class="form-label">Soil Moisture %</label>
+                                <input type="number" step="0.1" min="0" max="100" class="form-control" 
+                                       id="soil_moisture_percent" name="soil_moisture_percent" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quality Rating -->
+                    <div class="mb-3">
+                        <label for="quality_rating" class="form-label">Quality Rating (1-10)</label>
+                        <input type="range" class="form-range" min="1" max="10" step="1" 
+                               id="quality_rating" name="quality_rating" value="8">
+                        <div class="d-flex justify-content-between">
+                            <small>1 - Poor</small>
+                            <small><strong>Rating: <span id="rating-value">8</span></strong></small>
+                            <small>10 - Excellent</small>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Additional observations or comments..."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Log Operation
+                        </button>
+                        <a href="{{ url_for('operations_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Operation Types Guide</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Soil Preparation:</h6>
+                        <ul class="small">
+                            <li><strong>Plowing:</strong> Primary tillage, turning soil</li>
+                            <li><strong>Cultivating:</strong> Secondary tillage, seedbed prep</li>
+                        </ul>
+                        <h6>Crop Management:</h6>
+                        <ul class="small">
+                            <li><strong>Planting:</strong> Seeding crops</li>
+                            <li><strong>Fertilizing:</strong> Nutrient application</li>
+                            <li><strong>Spraying:</strong> Pesticide/herbicide application</li>
+                            <li><strong>Weeding:</strong> Weed control</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Harvest Operations:</h6>
+                        <ul class="small">
+                            <li><strong>Harvesting:</strong> Crop collection</li>
+                            <li><strong>Mowing:</strong> Cutting grass/hay</li>
+                            <li><strong>Baling:</strong> Making hay bales</li>
+                        </ul>
+                        <h6>Other:</h6>
+                        <ul class="small">
+                            <li><strong>Irrigating:</strong> Water application</li>
+                            <li><strong>Transport:</strong> Moving crops/materials</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set today's date as default
+document.getElementById('operation_date').valueAsDate = new Date();
+
+// Update quality rating display
+document.getElementById('quality_rating').addEventListener('input', function() {
+    document.getElementById('rating-value').textContent = this.value;
+});
+</script>
+{% endblock %}
