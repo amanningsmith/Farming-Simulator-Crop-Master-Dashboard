@@ -503,6 +503,44 @@ def record_harvest(season_id):
     conn.close()
     return render_template('crops/harvest.html', season=season)
 
+# Add this route to your CROP MANAGEMENT ROUTES section in app.py
+# Place it after the record_harvest route
+
+@app.route('/crops/<int:season_id>/delete', methods=['POST'])
+def delete_crop_season(season_id):
+    """Delete crop season"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('crops_list'))
+    
+    try:
+        # Get season info for flash message
+        season = conn.execute('''
+            SELECT cs.*, f.field_name
+            FROM crop_seasons cs
+            JOIN fields f ON cs.field_id = f.field_id
+            WHERE cs.season_id = ?
+        ''', (season_id,)).fetchone()
+        
+        if not season:
+            flash('Crop season not found!', 'error')
+            conn.close()
+            return redirect(url_for('crops_list'))
+        
+        # Delete the crop season
+        conn.execute('DELETE FROM crop_seasons WHERE season_id = ?', (season_id,))
+        conn.commit()
+        conn.close()
+        
+        flash(f'{season["crop_type"]} season in {season["field_name"]} deleted successfully!', 'success')
+        return redirect(url_for('crops_list'))
+        
+    except Exception as e:
+        flash(f'Error deleting crop season: {str(e)}', 'error')
+        if conn:
+            conn.close()
+        return redirect(url_for('crops_list'))
+
 # =====================================================
 # WEATHER EVENTS ROUTES
 # =====================================================

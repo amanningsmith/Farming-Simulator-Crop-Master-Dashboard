@@ -1,1 +1,173 @@
-<!-- Record harvest -->
+{% extends "base.html" %}
+
+{% block title %}Record Harvest - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-tractor"></i> Record Harvest</h3>
+                <p class="mb-0 text-muted">
+                    <strong>{{ season.crop_type }}</strong> in <strong>{{ season.field_name }}</strong> 
+                    - Planted {{ season.planting_date or 'date not recorded' }}
+                </p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Harvest Date -->
+                    <h5 class="mb-3">Harvest Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="harvest_date" class="form-label">Harvest Date *</label>
+                                <input type="date" class="form-control" id="harvest_date" 
+                                       name="harvest_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Growth Period</label>
+                                <input type="text" class="form-control" id="growth_days" 
+                                       value="Will calculate from planting date" readonly>
+                                <div class="form-text">Calculated automatically from planting to harvest</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Yield Information -->
+                    <h5 class="mb-3 mt-4">Yield & Quality</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="yield_tonnes_per_ha" class="form-label">Yield (tonnes per hectare) *</label>
+                                <input type="number" step="0.01" min="0" class="form-control" 
+                                       id="yield_tonnes_per_ha" name="yield_tonnes_per_ha" 
+                                       placeholder="0.00" required>
+                                <div class="form-text">Average yield per hectare for this field</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="quality_percent" class="form-label">Quality Rating % *</label>
+                                <input type="number" step="0.1" min="0" max="100" 
+                                       class="form-control" id="quality_percent" 
+                                       name="quality_percent" placeholder="0" required>
+                                <div class="form-text">Overall quality percentage (0-100%)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weather Impact -->
+                    <div class="mb-3">
+                        <label for="weather_impact" class="form-label">Weather Impact</label>
+                        <select class="form-select" id="weather_impact" name="weather_impact">
+                            <option value="">Select impact level</option>
+                            <option value="None">None - Ideal conditions</option>
+                            <option value="Minimal">Minimal - Minor delays or issues</option>
+                            <option value="Moderate">Moderate - Some yield/quality reduction</option>
+                            <option value="Significant">Significant - Major yield/quality impact</option>
+                            <option value="Severe">Severe - Crop loss or damage</option>
+                        </select>
+                        <div class="form-text">How did weather affect this crop?</div>
+                    </div>
+
+                    <!-- Disease & Pest Notes -->
+                    <div class="mb-3">
+                        <label for="disease_pest_notes" class="form-label">Disease & Pest Issues</label>
+                        <textarea class="form-control" id="disease_pest_notes" 
+                                  name="disease_pest_notes" rows="2" 
+                                  placeholder="Any diseases, pests, or other crop health issues..."></textarea>
+                    </div>
+
+                    <!-- General Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Harvest Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Overall observations, lessons learned, recommendations for next season..."></textarea>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-calculator"></i> Quick Stats</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Field Size:</strong> {{ season.field_name }} 
+                                (check field details for size)
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Planting Date:</strong> {{ season.planting_date or 'Not recorded' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Record Harvest
+                        </button>
+                        <a href="{{ url_for('crops_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Yield Reference Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Typical Yield Ranges (tonnes/hectare)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Common Grains:</h6>
+                        <ul class="small">
+                            <li><strong>Wheat:</strong> 3-8 t/ha</li>
+                            <li><strong>Corn:</strong> 8-12 t/ha</li>
+                            <li><strong>Barley:</strong> 3-6 t/ha</li>
+                            <li><strong>Rice:</strong> 5-7 t/ha</li>
+                            <li><strong>Soybeans:</strong> 2.5-4 t/ha</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Other Crops:</h6>
+                        <ul class="small">
+                            <li><strong>Canola:</strong> 2-4 t/ha</li>
+                            <li><strong>Sunflower:</strong> 2-3 t/ha</li>
+                            <li><strong>Potato:</strong> 20-40 t/ha</li>
+                            <li><strong>Sugar Beet:</strong> 50-80 t/ha</li>
+                        </ul>
+                    </div>
+                </div>
+                <small class="text-muted">These are typical ranges - actual yields vary by region, climate, and farming practices.</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set today's date as default
+document.getElementById('harvest_date').valueAsDate = new Date();
+
+// Calculate growth days when harvest date changes
+document.getElementById('harvest_date').addEventListener('change', function() {
+    const plantingDate = '{{ season.planting_date }}';
+    if (plantingDate) {
+        const planting = new Date(plantingDate);
+        const harvest = new Date(this.value);
+        const diffTime = harvest - planting;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 0) {
+            document.getElementById('growth_days').value = diffDays + ' days';
+        } else {
+            document.getElementById('growth_days').value = 'Invalid date range';
+        }
+    }
+});
+</script>
+{% endblock %}

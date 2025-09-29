@@ -1,1 +1,334 @@
-<!-- List crop seasons -->
+{% extends "base.html" %}
+
+{% block title %}Crop Seasons - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-leaf"></i> Crop Seasons</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('add_crop_season') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Add Crop Season
+        </a>
+    </div>
+</div>
+
+<!-- Filter and Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="mb-1">{{ seasons|length }}</h3>
+                <small class="text-muted">Total Seasons</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                {% set harvested = seasons|selectattr('harvest_date')|list|length %}
+                <h3 class="mb-1">{{ harvested }}</h3>
+                <small class="text-muted">Harvested</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                {% set active = seasons|rejectattr('harvest_date')|list|length %}
+                <h3 class="mb-1">{{ active }}</h3>
+                <small class="text-muted">Active/Growing</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                {% set yields = seasons|selectattr('yield_tonnes_per_ha')|map(attribute='yield_tonnes_per_ha')|list %}
+                <h3 class="mb-1">
+                    {% if yields %}
+                        {{ "{:.1f}".format(yields|sum / yields|length) }}
+                    {% else %}
+                        0.0
+                    {% endif %}
+                </h3>
+                <small class="text-muted">Avg Yield (t/ha)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Crop Seasons Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> All Crop Seasons</h5>
+            <div>
+                <select class="form-select form-select-sm" id="yearFilter" onchange="filterByYear()">
+                    <option value="">All Years</option>
+                    {% set years = seasons|map(attribute='crop_year')|unique|sort(reverse=True)|list %}
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if seasons %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="seasonsTable">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Season</th>
+                        <th>Field</th>
+                        <th>Crop Type</th>
+                        <th>Variety</th>
+                        <th>Planting</th>
+                        <th>Harvest</th>
+                        <th>Days</th>
+                        <th>Yield (t/ha)</th>
+                        <th>Quality</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for season in seasons %}
+                    <tr data-year="{{ season.crop_year }}">
+                        <td><strong>{{ season.crop_year }}</strong></td>
+                        <td>
+                            {% if season.season_name %}
+                                <span class="badge bg-info">{{ season.season_name }}</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ season.field_name }}</strong>
+                            <br><small class="text-muted">{{ season.field_id }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ season.crop_type }}</strong>
+                        </td>
+                        <td>{{ season.variety_name or '-' }}</td>
+                        <td>{{ season.planting_date or '-' }}</td>
+                        <td>
+                            {% if season.harvest_date %}
+                                {{ season.harvest_date }}
+                            {% else %}
+                                <span class="text-warning">Not harvested</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if season.growth_days %}
+                                {{ season.growth_days }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if season.yield_tonnes_per_ha %}
+                                <strong class="text-success">{{ "{:.2f}".format(season.yield_tonnes_per_ha) }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if season.quality_percent %}
+                                <span class="badge bg-{{ 'success' if season.quality_percent >= 90 else 'info' if season.quality_percent >= 80 else 'warning' }}">
+                                    {{ season.quality_percent }}%
+                                </span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if season.harvest_date %}
+                                <span class="badge bg-secondary">Complete</span>
+                            {% else %}
+                                <span class="badge bg-success">Growing</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                {% if not season.harvest_date %}
+                                <a href="{{ url_for('record_harvest', season_id=season.season_id) }}" 
+                                   class="btn btn-sm btn-outline-success"
+                                   title="Record harvest">
+                                    <i class="fas fa-tractor"></i>
+                                </a>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#viewModal{{ season.season_id }}"
+                                        title="View details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ season.season_id }}"
+                                        title="Delete season">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-seedling fa-3x text-muted mb-3"></i>
+            <h4>No Crop Seasons</h4>
+            <p class="text-muted">Track your crop growing cycles from planting to harvest.</p>
+            <a href="{{ url_for('add_crop_season') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add First Crop Season
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- View Modals -->
+{% for season in seasons %}
+<div class="modal fade" id="viewModal{{ season.season_id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ season.crop_type }} - {{ season.field_name }} ({{ season.crop_year }})</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Planting Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Field:</th>
+                                <td>{{ season.field_name }} ({{ season.field_id }})</td>
+                            </tr>
+                            <tr>
+                                <th>Crop Type:</th>
+                                <td>{{ season.crop_type }}</td>
+                            </tr>
+                            <tr>
+                                <th>Variety:</th>
+                                <td>{{ season.variety_name or 'Not specified' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Season:</th>
+                                <td>{{ season.season_name or 'Not specified' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Planting Date:</th>
+                                <td>{{ season.planting_date or 'Not recorded' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Harvest Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Harvest Date:</th>
+                                <td>{{ season.harvest_date or 'Not harvested' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Growth Days:</th>
+                                <td>{{ season.growth_days or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Yield:</th>
+                                <td>
+                                    {% if season.yield_tonnes_per_ha %}
+                                        <strong>{{ "{:.2f}".format(season.yield_tonnes_per_ha) }} t/ha</strong>
+                                    {% else %}
+                                        Not recorded
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Quality:</th>
+                                <td>{{ season.quality_percent or 'Not rated' }}%</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if season.weather_impact or season.disease_pest_notes %}
+                <hr>
+                <h6>Issues & Notes</h6>
+                {% if season.weather_impact %}
+                <p><strong>Weather Impact:</strong> {{ season.weather_impact }}</p>
+                {% endif %}
+                {% if season.disease_pest_notes %}
+                <p><strong>Disease/Pest Notes:</strong> {{ season.disease_pest_notes }}</p>
+                {% endif %}
+                {% endif %}
+
+                {% if season.notes %}
+                <hr>
+                <h6>Additional Notes</h6>
+                <p>{{ season.notes }}</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                {% if not season.harvest_date %}
+                <a href="{{ url_for('record_harvest', season_id=season.season_id) }}" 
+                   class="btn btn-success">
+                    <i class="fas fa-tractor"></i> Record Harvest
+                </a>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal{{ season.season_id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Crop Season</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this crop season?</p>
+                <ul>
+                    <li><strong>Field:</strong> {{ season.field_name }}</li>
+                    <li><strong>Crop:</strong> {{ season.crop_type }}</li>
+                    <li><strong>Year:</strong> {{ season.crop_year }}</li>
+                </ul>
+                <p class="text-danger"><strong>This action cannot be undone!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_crop_season', season_id=season.season_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete Season
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterByYear() {
+    const year = document.getElementById('yearFilter').value;
+    const rows = document.querySelectorAll('#seasonsTable tbody tr');
+    
+    rows.forEach(row => {
+        if (year === '' || row.dataset.year === year) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

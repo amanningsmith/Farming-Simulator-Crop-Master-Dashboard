@@ -1,1 +1,169 @@
-<!-- Add crop season -->
+{% extends "base.html" %}
+
+{% block title %}Add Crop Season - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-seedling"></i> Add New Crop Season</h3>
+                <p class="mb-0 text-muted">Track a complete growing cycle from planting to harvest</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="field_id" class="form-label">Field *</label>
+                                <select class="form-select" id="field_id" name="field_id" required>
+                                    <option value="">Select field</option>
+                                    {% for field in fields %}
+                                    <option value="{{ field.field_id }}">
+                                        {{ field.field_name }} - {{ field.size_hectares }} ha
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="crop_year" class="form-label">Crop Year *</label>
+                                <input type="number" class="form-control" id="crop_year" 
+                                       name="crop_year" min="2020" max="2030" 
+                                       value="{{ current_year }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="crop_type" class="form-label">Crop Type *</label>
+                                <select class="form-select" id="crop_type" name="crop_type" required>
+                                    <option value="">Select crop</option>
+                                    <option value="Wheat">Wheat</option>
+                                    <option value="Barley">Barley</option>
+                                    <option value="Oat">Oat</option>
+                                    <option value="Corn">Corn</option>
+                                    <option value="Soybean">Soybean</option>
+                                    <option value="Canola">Canola</option>
+                                    <option value="Sunflower">Sunflower</option>
+                                    <option value="Rice">Rice</option>
+                                    <option value="Sorghum">Sorghum</option>
+                                    <option value="Potato">Potato</option>
+                                    <option value="Sugar Beet">Sugar Beet</option>
+                                    <option value="Spinach">Spinach</option>
+                                    <option value="Green Beans">Green Beans</option>
+                                    <option value="Peas">Peas</option>
+                                    <option value="Grass">Grass</option>
+                                    <option value="Hay">Hay</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="variety_name" class="form-label">Variety/Brand</label>
+                                <input type="text" class="form-control" id="variety_name" 
+                                       name="variety_name" placeholder="e.g., Pioneer P1234">
+                                <div class="form-text">Specific seed variety or brand</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="season_name" class="form-label">Season</label>
+                                <select class="form-select" id="season_name" name="season_name">
+                                    <option value="">Select season</option>
+                                    <option value="Spring">Spring</option>
+                                    <option value="Summer">Summer</option>
+                                    <option value="Fall">Fall</option>
+                                    <option value="Winter">Winter</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Planting Information -->
+                    <h5 class="mb-3 mt-4">Planting Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="planting_date" class="form-label">Planting Date</label>
+                                <input type="date" class="form-control" id="planting_date" 
+                                       name="planting_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="rotation_benefit_percent" class="form-label">Rotation Benefit %</label>
+                                <input type="number" step="0.1" min="0" max="100" 
+                                       class="form-control" id="rotation_benefit_percent" 
+                                       name="rotation_benefit_percent" placeholder="0">
+                                <div class="form-text">Benefit from crop rotation</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Planning Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Planting goals, expected conditions, etc..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Harvest information (yield, quality, dates) will be added later 
+                        when you record the harvest for this crop season.
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Add Crop Season
+                        </button>
+                        <a href="{{ url_for('crops_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-question-circle"></i> What is a Crop Season?</h5>
+            </div>
+            <div class="card-body">
+                <p>A <strong>Crop Season</strong> tracks one complete growing cycle of a crop from planting to harvest.</p>
+                <h6>Use Crop Seasons to:</h6>
+                <ul>
+                    <li>Track which crops were planted in which fields each year</li>
+                    <li>Record yield and quality for performance analysis</li>
+                    <li>Monitor crop rotation and soil health</li>
+                    <li>Compare varieties and identify best performers</li>
+                    <li>Keep historical records of field productivity</li>
+                </ul>
+                <h6>Workflow:</h6>
+                <ol>
+                    <li><strong>Add Season:</strong> Create record when you plan/plant</li>
+                    <li><strong>During Growing:</strong> Track maintenance and issues</li>
+                    <li><strong>At Harvest:</strong> Record yield, quality, and notes</li>
+                    <li><strong>Analysis:</strong> Compare performance across fields/years</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set current year as default
+const currentYear = new Date().getFullYear();
+document.getElementById('crop_year').value = currentYear;
+</script>
+{% endblock %}
