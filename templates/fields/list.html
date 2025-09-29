@@ -62,13 +62,21 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('field_detail', field_id=field.field_id) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ url_for('field_detail', field_id=field.field_id) }}" 
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="View field details">
                                     <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{{ url_for('field_maintenance_add', field_id=field.field_id) }}" 
+                                   class="btn btn-sm btn-outline-warning"
+                                   title="Add maintenance record">
+                                    <i class="fas fa-tools"></i> Maintenance
                                 </a>
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                         data-bs-toggle="modal" 
-                                        data-bs-target="#deleteModal{{ field.field_id }}">
-                                    <i class="fas fa-trash"></i> Delete
+                                        data-bs-target="#deleteModal{{ field.field_id }}"
+                                        title="Delete field">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>

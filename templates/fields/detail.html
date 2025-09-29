@@ -1,1 +1,494 @@
-<!-- Field details -->
+{% extends "base.html" %}
+
+{% block title %}{{ field.field_name }} - FS25 Farm Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-map-marked-alt"></i> {{ field.field_name }}</h1>
+        <p class="text-muted mb-0">Field ID: <strong>{{ field.field_id }}</strong></p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('field_maintenance_add', field_id=field.field_id) }}" class="btn btn-warning">
+            <i class="fas fa-tools"></i> Add Maintenance
+        </a>
+        <a href="{{ url_for('add_planting') }}" class="btn btn-success">
+            <i class="fas fa-seedling"></i> New Planting
+        </a>
+        <a href="{{ url_for('add_crop_season') }}" class="btn btn-info">
+            <i class="fas fa-plus"></i> Add Crop Season
+        </a>
+        <a href="{{ url_for('fields_list') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Fields
+        </a>
+    </div>
+</div>
+
+<!-- Field Information Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="mb-1">{{ field.size_hectares }}</h3>
+                <small class="text-muted">Hectares</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="mb-1">{{ seasons|length }}</h3>
+                <small class="text-muted">Crop Seasons</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="mb-1">{{ operations|length }}</h3>
+                <small class="text-muted">Operations</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="mb-1">
+                    {% if field.current_value %}
+                        ${{ "{:,.0f}".format(field.current_value) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </h3>
+                <small class="text-muted">Current Value</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Field Details -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Field Properties</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="40%">Soil Type:</th>
+                            <td>{{ field.soil_type or 'Not specified' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Soil pH:</th>
+                            <td>{{ field.soil_ph or 'Not measured' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Organic Matter:</th>
+                            <td>
+                                {% if field.organic_matter_percent %}
+                                    {{ field.organic_matter_percent }}%
+                                {% else %}
+                                    Not measured
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Drainage:</th>
+                            <td>
+                                {% if field.drainage_rating %}
+                                    <span class="badge bg-{{ 'success' if field.drainage_rating == 'Excellent' else 'info' if field.drainage_rating == 'Good' else 'warning' if field.drainage_rating == 'Fair' else 'danger' }}">
+                                        {{ field.drainage_rating }}
+                                    </span>
+                                {% else %}
+                                    Not rated
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Slope:</th>
+                            <td>
+                                {% if field.slope_percent %}
+                                    {{ field.slope_percent }}%
+                                {% else %}
+                                    Not measured
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Stone Content:</th>
+                            <td>
+                                {% if field.stone_percent %}
+                                    {{ field.stone_percent }}%
+                                {% else %}
+                                    Not measured
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-dollar-sign"></i> Financial Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="40%">Purchase Price:</th>
+                            <td>
+                                {% if field.purchase_price %}
+                                    ${{ "{:,.0f}".format(field.purchase_price) }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Purchase Date:</th>
+                            <td>{{ field.purchase_date or 'Not recorded' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Current Value:</th>
+                            <td>
+                                {% if field.current_value %}
+                                    ${{ "{:,.0f}".format(field.current_value) }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Value Change:</th>
+                            <td>
+                                {% if field.purchase_price and field.current_value %}
+                                    {% set change = field.current_value - field.purchase_price %}
+                                    {% set change_percent = (change / field.purchase_price * 100) %}
+                                    <span class="badge bg-{{ 'success' if change >= 0 else 'danger' }}">
+                                        {{ "+" if change >= 0 else "" }}${{ "{:,.0f}".format(change) }}
+                                        ({{ "{:+.1f}".format(change_percent) }}%)
+                                    </span>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                {% if field.gps_latitude and field.gps_longitude %}
+                <div class="mt-3">
+                    <h6><i class="fas fa-map-marker-alt"></i> GPS Coordinates</h6>
+                    <p class="mb-0">
+                        <small>
+                            Lat: {{ field.gps_latitude }}, Lon: {{ field.gps_longitude }}
+                            <a href="https://www.google.com/maps?q={{ field.gps_latitude }},{{ field.gps_longitude }}" 
+                               target="_blank" class="ms-2">
+                                <i class="fas fa-external-link-alt"></i> View on Map
+                            </a>
+                        </small>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notes -->
+{% if field.notes %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-sticky-note"></i> Notes</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ field.notes }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Crop Seasons -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-seedling"></i> Crop History</h5>
+            </div>
+            <div class="card-body">
+                {% if seasons %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Season</th>
+                                <th>Crop</th>
+                                <th>Variety</th>
+                                <th>Planting Date</th>
+                                <th>Harvest Date</th>
+                                <th>Growth Days</th>
+                                <th>Yield (t/ha)</th>
+                                <th>Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for season in seasons %}
+                            <tr>
+                                <td><strong>{{ season.crop_year }}</strong></td>
+                                <td>
+                                    {% if season.season_name %}
+                                        <span class="badge bg-info">{{ season.season_name }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ season.crop_type }}</strong></td>
+                                <td>{{ season.variety_name or '-' }}</td>
+                                <td>{{ season.planting_date or '-' }}</td>
+                                <td>{{ season.harvest_date or '-' }}</td>
+                                <td>
+                                    {% if season.growth_days %}
+                                        {{ season.growth_days }} days
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if season.yield_tonnes_per_ha %}
+                                        <strong>{{ "{:.2f}".format(season.yield_tonnes_per_ha) }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">Not harvested</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if season.quality_percent %}
+                                        <span class="badge bg-{{ 'success' if season.quality_percent >= 90 else 'info' if season.quality_percent >= 80 else 'warning' }}">
+                                            {{ season.quality_percent }}%
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Average Performance Summary -->
+                {% set total_yield = seasons|selectattr('yield_tonnes_per_ha')|map(attribute='yield_tonnes_per_ha')|list %}
+                {% if total_yield %}
+                <div class="alert alert-info mt-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Average Yield:</strong> {{ "{:.2f}".format(total_yield|sum / total_yield|length) }} t/ha
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Best Yield:</strong> {{ "{:.2f}".format(total_yield|max) }} t/ha
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total Production:</strong> {{ "{:.1f}".format((total_yield|sum / total_yield|length) * field.size_hectares * total_yield|length) }} tonnes
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-seedling fa-3x text-muted mb-3"></i>
+                    <h5>No Crop Seasons Yet</h5>
+                    <p class="text-muted">Start tracking crops planted in this field.</p>
+                    <a href="{{ url_for('add_crop_season') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add First Crop Season
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Operations -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cogs"></i> Recent Operations</h5>
+            </div>
+            <div class="card-body">
+                {% if operations %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Operation</th>
+                                <th>Hours</th>
+                                <th>Fuel (L)</th>
+                                <th>Weather</th>
+                                <th>Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in operations %}
+                            <tr>
+                                <td>{{ op.operation_date }}</td>
+                                <td><strong>{{ op.operation_type }}</strong></td>
+                                <td>{{ op.hours_worked or '-' }}</td>
+                                <td>{{ op.fuel_used_liters or '-' }}</td>
+                                <td><small>{{ op.weather_conditions or '-' }}</small></td>
+                                <td>
+                                    {% if op.quality_rating %}
+                                        <span class="badge bg-{{ 'success' if op.quality_rating >= 8 else 'warning' if op.quality_rating >= 6 else 'danger' }}">
+                                            {{ op.quality_rating }}/10
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                    <h5>No Operations Recorded</h5>
+                    <p class="text-muted">Start logging field operations.</p>
+                    <a href="{{ url_for('add_operation') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Log First Operation
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weather Events -->
+{% if weather_events %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cloud-rain"></i> Weather Events</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Event Type</th>
+                                <th>Severity</th>
+                                <th>Damage</th>
+                                <th>Yield Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in weather_events %}
+                            <tr>
+                                <td>{{ event.event_date }}</td>
+                                <td><strong>{{ event.weather_type }}</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if event.severity == 'Light' else 'danger' if event.severity in ['Severe', 'Extreme'] else 'info' }}">
+                                        {{ event.severity or 'Unknown' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if event.damage_percent %}
+                                        {{ event.damage_percent }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if event.yield_impact_percent %}
+                                        <span class="text-danger">-{{ event.yield_impact_percent }}%</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('field_maintenance_add', field_id=field.field_id) }}" class="btn btn-warning">
+                        <i class="fas fa-tools"></i> Add Maintenance
+                    </a>
+                    <a href="{{ url_for('add_crop_season') }}" class="btn btn-success">
+                        <i class="fas fa-seedling"></i> Add Crop Season
+                    </a>
+                    <a href="{{ url_for('add_operation') }}" class="btn btn-info">
+                        <i class="fas fa-cogs"></i> Log Operation
+                    </a>
+                    <a href="{{ url_for('add_weather_event') }}" class="btn btn-warning">
+                        <i class="fas fa-cloud-rain"></i> Log Weather Event
+                    </a>
+                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash"></i> Delete Field
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Field: {{ field.field_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning!</strong> This will permanently delete:
+                </div>
+                <ul>
+                    <li>Field "{{ field.field_name }}" ({{ field.field_id }})</li>
+                    <li>All crop seasons ({{ seasons|length }})</li>
+                    <li>All field operations ({{ operations|length }})</li>
+                    <li>All weather events</li>
+                    <li>All associated data</li>
+                </ul>
+                <p><strong>This action cannot be undone!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_field', field_id=field.field_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete Field
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

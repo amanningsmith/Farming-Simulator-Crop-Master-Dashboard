@@ -1551,27 +1551,33 @@ def planting_detail(planting_id):
 
 # =====================================================
 # FIELD MAINTENANCE ROUTES
+# Add this NEW route to your app.py
 # =====================================================
 
-@app.route('/maintenance/add/<int:planting_id>', methods=['GET', 'POST'])
-def add_maintenance(planting_id):
-    """Add field maintenance record"""
+@app.route('/fields/<field_id>/maintenance/add', methods=['GET', 'POST'])
+def field_maintenance_add(field_id):
+    """Add maintenance record directly from field (not tied to specific planting)"""
     conn = get_db_connection()
     if not conn:
-        return redirect(url_for('planting_dashboard'))
+        return redirect(url_for('fields_list'))
     
-    # Get planting info
-    planting = conn.execute('''
-        SELECT p.*, f.field_name
-        FROM planting_records p
-        JOIN fields f ON p.field_id = f.field_id
-        WHERE p.planting_id = ?
-    ''', (planting_id,)).fetchone()
+    # Get field info
+    field = conn.execute('''
+        SELECT * FROM fields WHERE field_id = ?
+    ''', (field_id,)).fetchone()
     
-    if not planting:
-        flash('Planting record not found!', 'error')
+    if not field:
+        flash('Field not found!', 'error')
         conn.close()
-        return redirect(url_for('planting_dashboard'))
+        return redirect(url_for('fields_list'))
+    
+    # Get active plantings for this field (optional - user can select one or none)
+    active_plantings = conn.execute('''
+        SELECT planting_id, crop_type, variety, planting_date, status
+        FROM planting_records
+        WHERE field_id = ? AND status = 'Active'
+        ORDER BY planting_date DESC
+    ''', (field_id,)).fetchall()
     
     if request.method == 'POST':
         try:
@@ -1581,6 +1587,10 @@ def add_maintenance(planting_id):
             equipment_used = request.form.get('equipment_used', '')
             operator_name = request.form.get('operator_name', '')
             hours_worked = float(request.form.get('hours_worked', 0))
+            
+            # Optional planting association
+            planting_id = request.form.get('planting_id')
+            planting_id = int(planting_id) if planting_id and planting_id != '' else None
             
             # Costs
             labor_cost = float(request.form.get('labor_cost', 0))
@@ -1606,7 +1616,7 @@ def add_maintenance(planting_id):
                     weather_conditions, soil_conditions, notes
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                planting['field_id'], planting_id, maintenance_date, maintenance_type,
+                field_id, planting_id, maintenance_date, maintenance_type,
                 operation_details, equipment_used, operator_name, hours_worked,
                 labor_cost, equipment_cost, material_cost, fuel_cost, total_cost,
                 area_covered, product_used, application_rate,
@@ -1616,14 +1626,20 @@ def add_maintenance(planting_id):
             conn.commit()
             conn.close()
             
-            flash(f'{maintenance_type} maintenance recorded successfully!', 'success')
-            return redirect(url_for('planting_detail', planting_id=planting_id))
+            flash(f'{maintenance_type} maintenance recorded successfully for {field["field_name"]}!', 'success')
+            return redirect(url_for('field_detail', field_id=field_id))
             
         except Exception as e:
             flash(f'Error adding maintenance record: {str(e)}', 'error')
+            if conn:
+                conn.close()
+            return redirect(url_for('field_maintenance_add', field_id=field_id))
     
     conn.close()
-    return render_template('maintenance/add.html', planting=planting)
+    return render_template('maintenance/field_add.html', 
+                         field=field, 
+                         active_plantings=active_plantings)
+
 
 # =====================================================
 # HARVEST TRACKING ROUTES
@@ -1754,6 +1770,120 @@ def add_harvest(planting_id):
     
     conn.close()
     return render_template('harvest/add.html', planting=planting)
+
+# =====================================================
+# FIELD MAINTENANCE ROUTES
+# =====================================================
+
+@app.route('/maintenance/add/<int:planting_id>', methods=['GET', 'POST'])
+def add_maintenance(planting_id):
+    """Add field maintenance record"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('planting_dashboard'))
+    
+    # Get planting info
+    planting = conn.execute('''
+        SELECT p.*, f.field_name
+        FROM planting_records p
+        JOIN fields f ON p.field_id = f.field_id
+        WHERE p.planting_id = ?
+    ''', (planting_id,)).fetchone()
+    
+    if not planting:
+        flash('Planting record not found!', 'error')
+        conn.close()
+        return redirect(url_for('planting_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            maintenance_date = request.form.get('maintenance_date')
+            maintenance_type = request.form.get('maintenance_type')
+            operation_details = request.form.get('operation_details', '')
+            equipment_used = request.form.get('equipment_used', '')
+            operator_name = request.form.get('operator_name', '')
+            hours_worked = float(request.form.get('hours_worked', 0))
+            
+            # Costs
+            labor_cost = float(request.form.get('labor_cost', 0))
+            equipment_cost = float(request.form.get('equipment_cost', 0))
+            material_cost = float(request.form.get('material_cost', 0))
+            fuel_cost = float(request.form.get('fuel_cost', 0))
+            total_cost = labor_cost + equipment_cost + material_cost + fuel_cost
+            
+            # Details
+            area_covered = float(request.form.get('area_covered_ha', 0)) if request.form.get('area_covered_ha') else None
+            product_used = request.form.get('product_used', '')
+            application_rate = request.form.get('application_rate', '')
+            weather_conditions = request.form.get('weather_conditions', '')
+            soil_conditions = request.form.get('soil_conditions', '')
+            notes = request.form.get('notes', '')
+            
+            conn.execute('''
+                INSERT INTO field_maintenance (
+                    field_id, planting_id, maintenance_date, maintenance_type,
+                    operation_details, equipment_used, operator_name, hours_worked,
+                    labor_cost, equipment_cost, material_cost, fuel_cost, total_cost,
+                    area_covered_ha, product_used, application_rate,
+                    weather_conditions, soil_conditions, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                planting['field_id'], planting_id, maintenance_date, maintenance_type,
+                operation_details, equipment_used, operator_name, hours_worked,
+                labor_cost, equipment_cost, material_cost, fuel_cost, total_cost,
+                area_covered, product_used, application_rate,
+                weather_conditions, soil_conditions, notes
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            flash(f'{maintenance_type} maintenance recorded successfully!', 'success')
+            return redirect(url_for('planting_detail', planting_id=planting_id))
+            
+        except Exception as e:
+            flash(f'Error adding maintenance record: {str(e)}', 'error')
+    
+    conn.close()
+    return render_template('maintenance/add.html', planting=planting)
+
+
+# =====================================================
+# OPTIONAL: Additional maintenance management routes
+# =====================================================
+
+@app.route('/maintenance/list')
+def maintenance_list():
+    """List all maintenance records"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    
+    try:
+        maintenance = conn.execute('''
+            SELECT m.*, f.field_name, p.crop_type
+            FROM field_maintenance m
+            JOIN fields f ON m.field_id = f.field_id
+            LEFT JOIN planting_records p ON m.planting_id = p.planting_id
+            ORDER BY m.maintenance_date DESC
+            LIMIT 100
+        ''').fetchall()
+        
+        conn.close()
+        return render_template('maintenance/list.html', maintenance=maintenance)
+    
+    except Exception as e:
+        flash(f'Error loading maintenance records: {str(e)}', 'error')
+        conn.close()
+        return redirect(url_for('index'))
+
+
+@app.route('/maintenance/<int:maintenance_id>/edit', methods=['GET', 'POST'])
+def edit_maintenance(maintenance_id):
+    """Edit maintenance record"""
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('maintenance_list'))
 
 # =====================================================
 # ERROR HANDLERS AND UTILITY ROUTES

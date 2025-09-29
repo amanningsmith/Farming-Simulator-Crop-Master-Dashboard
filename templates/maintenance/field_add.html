@@ -9,8 +9,7 @@
             <div class="card-header">
                 <h3><i class="fas fa-tools"></i> Record Field Maintenance</h3>
                 <p class="mb-0 text-muted">
-                    For: <strong>{{ planting.crop_type }}</strong> in <strong>{{ planting.field_name }}</strong>
-                    (Planted: {{ planting.planting_date }})
+                    For Field: <strong>{{ field.field_name }}</strong> ({{ field.field_id }}) - {{ field.size_hectares }} ha
                 </p>
             </div>
             <div class="card-body">
@@ -39,11 +38,32 @@
                                     <option value="Irrigation">Irrigation</option>
                                     <option value="Rolling">Rolling</option>
                                     <option value="Mulching">Mulching</option>
+                                    <option value="Mowing">Mowing</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Optional Planting Association -->
+                    {% if active_plantings %}
+                    <div class="mb-3">
+                        <label for="planting_id" class="form-label">
+                            <i class="fas fa-seedling"></i> Associated Planting (Optional)
+                        </label>
+                        <select class="form-select" id="planting_id" name="planting_id">
+                            <option value="">Not associated with specific planting</option>
+                            {% for planting in active_plantings %}
+                            <option value="{{ planting.planting_id }}">
+                                {{ planting.crop_type }} 
+                                {% if planting.variety %}({{ planting.variety }}){% endif %}
+                                - Planted {{ planting.planting_date }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select if this maintenance is for a specific crop</div>
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label for="operation_details" class="form-label">Operation Details</label>
@@ -116,7 +136,7 @@
                         <h5>Total Maintenance Cost: $<span id="total-cost">0.00</span></h5>
                     </div>
 
-                    <!-- Application Details (for spraying, fertilizing, etc.) -->
+                    <!-- Application Details -->
                     <h5 class="mb-3 mt-4">Application Details</h5>
                     <div class="row">
                         <div class="col-md-4">
@@ -124,7 +144,7 @@
                                 <label for="area_covered_ha" class="form-label">Area Covered (ha)</label>
                                 <input type="number" step="0.1" min="0" class="form-control" 
                                        id="area_covered_ha" name="area_covered_ha" 
-                                       value="{{ planting.planted_area_ha }}">
+                                       value="{{ field.size_hectares }}">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -179,9 +199,12 @@
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save"></i> Save Maintenance Record
                         </button>
-                        <a href="{{ url_for('planting_detail', planting_id=planting.planting_id) }}" 
+                        <a href="{{ url_for('field_detail', field_id=field.field_id) }}" 
                            class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancel
+                            <i class="fas fa-arrow-left"></i> Back to Field
+                        </a>
+                        <a href="{{ url_for('fields_list') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> Back to Fields List
                         </a>
                     </div>
                 </form>
@@ -212,6 +235,7 @@
                             <li><strong>Irrigation:</strong> Water application</li>
                             <li><strong>Rolling:</strong> Soil compaction, leveling</li>
                             <li><strong>Mulching:</strong> Applying organic matter</li>
+                            <li><strong>Mowing:</strong> Cutting grass or vegetation</li>
                         </ul>
                     </div>
                 </div>
@@ -235,18 +259,6 @@ function calculateTotal() {
 
 // Set today's date as default
 document.getElementById('maintenance_date').valueAsDate = new Date();
-
-// Show/hide application fields based on maintenance type
-document.getElementById('maintenance_type').addEventListener('change', function() {
-    const applicationType = ['Fertilizing', 'Liming', 'Spraying'];
-    const showApplicationFields = applicationType.includes(this.value);
-    
-    // You can add logic here to show/hide certain fields based on type
-    if (showApplicationFields) {
-        document.getElementById('product_used').closest('.mb-3').style.display = 'block';
-        document.getElementById('application_rate').closest('.mb-3').style.display = 'block';
-    }
-});
 
 // Initialize
 calculateTotal();
